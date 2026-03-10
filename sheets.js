@@ -2,10 +2,23 @@ const { google } = require('googleapis');
 require('dotenv').config();
 
 async function getSheetClient() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: './credentials.json',
-    scopes: ['https://www.googleapis.com/auth/spreadsheets']
-  });
+  let auth;
+
+  if (process.env.GOOGLE_CREDENTIALS) {
+    // On Render — read from environment variable
+    const credentials = JSON.parse(JSON.parse(process.env.GOOGLE_CREDENTIALS));
+    auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+  } else {
+    // Local — read from file
+    auth = new google.auth.GoogleAuth({
+      keyFile: './credentials.json',
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+  }
+
   const client = await auth.getClient();
   return google.sheets({ version: 'v4', auth: client });
 }
@@ -22,30 +35,30 @@ async function updateSheet(jobs) {
     const goodMatches = jobs.filter(j => j.matchScore >= 70 && j.matchScore < 85).length;
     const topScore = jobs[0]?.matchScore || 0;
 
-    // ── Get existing data to find last row ──────────────────────────────────
+    // Get existing data to find last row
     const existing = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Sheet1!A:A'
     });
     const lastRow = existing.data.values ? existing.data.values.length : 0;
 
-    // ── Summary row (always row 1) ──────────────────────────────────────────
+    // Summary row (always row 1)
     const summaryRow = [
-      `📊 Last Updated: ${today}`,
+      `Last Updated: ${today}`,
       `Total Jobs (all time): ${lastRow === 0 ? jobs.length : lastRow - 1 + jobs.length}`,
-      `🔥 Excellent (85%+): ${excellentMatches}`,
-      `✅ Good (70-84%): ${goodMatches}`,
-      `🏆 Top Score Today: ${topScore}%`,
+      `Excellent (85%+): ${excellentMatches}`,
+      `Good (70-84%): ${goodMatches}`,
+      `Top Score Today: ${topScore}%`,
       '', '', '', '', '', ''
     ];
 
-    // ── Headers ─────────────────────────────────────────────────────────────
+    // Headers
     const headers = [
       '#', 'Job Title', 'Company', 'Location', 'Match Score',
       'Salary', 'Source', 'Posted', 'Apply Link', 'Tailor Resume', 'Status'
     ];
 
-    // ── Job rows ─────────────────────────────────────────────────────────────
+    // Job rows
     const rows = jobs.map((job, idx) => [
       idx + 1,
       job.title,
@@ -56,17 +69,17 @@ async function updateSheet(jobs) {
       job.source,
       job.postedDate ? new Date(job.postedDate).toLocaleDateString() : today,
       job.applyLink,
-`http://localhost:3001/tailor?job=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}`,
+      `https://your-render-url.onrender.com/tailor?job=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}`,
       'Not Applied'
     ]);
 
-    // ── Separator row ────────────────────────────────────────────────────────
+    // Separator row
     const separatorRow = [
-      `📅 BATCH: ${today}   |   Jobs Found: ${jobs.length}   |   🔥 Excellent: ${excellentMatches}   |   ✅ Good: ${goodMatches}   |   🏆 Top Score: ${topScore}%`,
+      `BATCH: ${today}   |   Jobs Found: ${jobs.length}   |   Excellent: ${excellentMatches}   |   Good: ${goodMatches}   |   Top Score: ${topScore}%`,
       '', '', '', '', '', '', '', '', '', ''
     ];
 
-    // ── If first time: write summary + headers ───────────────────────────────
+    // If first time: write summary + headers
     if (lastRow === 0) {
       await sheets.spreadsheets.values.update({
         spreadsheetId,
@@ -76,7 +89,7 @@ async function updateSheet(jobs) {
       });
     }
 
-    // ── Append separator + new jobs after existing rows ──────────────────────
+    // Append separator + new jobs after existing rows
     const appendRow = lastRow === 0 ? 3 : lastRow + 1;
 
     await sheets.spreadsheets.values.update({
@@ -86,7 +99,7 @@ async function updateSheet(jobs) {
       requestBody: { values: [separatorRow, ...rows] }
     });
 
-    // ── Always update summary row ─────────────────────────────────────────────
+    // Always update summary row
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: 'Sheet1!A1',
@@ -94,14 +107,14 @@ async function updateSheet(jobs) {
       requestBody: { values: [summaryRow] }
     });
 
-    // ── Formatting ────────────────────────────────────────────────────────────
+    // Formatting
     const totalRowsNow = appendRow + rows.length;
 
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
         requests: [
-          // Summary row - dark blue background, cyan text
+          // Summary row
           {
             repeatCell: {
               range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
@@ -118,7 +131,7 @@ async function updateSheet(jobs) {
               fields: 'userEnteredFormat(backgroundColor,textFormat)'
             }
           },
-          // Header row - dark background, white bold text
+          // Header row
           {
             repeatCell: {
               range: { sheetId: 0, startRowIndex: 1, endRowIndex: 2 },
@@ -136,7 +149,7 @@ async function updateSheet(jobs) {
               fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)'
             }
           },
-          // Separator row - purple tint
+          // Separator row
           {
             repeatCell: {
               range: {
@@ -167,7 +180,7 @@ async function updateSheet(jobs) {
               fields: 'gridProperties.frozenRowCount'
             }
           },
-          // Auto resize all columns
+          // Auto resize columns
           {
             autoResizeDimensions: {
               dimensions: {
@@ -178,7 +191,7 @@ async function updateSheet(jobs) {
               }
             }
           },
-          // Status dropdown for new rows
+          // Status dropdown
           {
             setDataValidation: {
               range: {
@@ -193,11 +206,11 @@ async function updateSheet(jobs) {
                   type: 'ONE_OF_LIST',
                   values: [
                     { userEnteredValue: 'Not Applied' },
-                    { userEnteredValue: '⭐ Interested' },
-                    { userEnteredValue: '📤 Applied' },
-                    { userEnteredValue: '📞 Interview' },
-                    { userEnteredValue: '🎉 Offer' },
-                    { userEnteredValue: '❌ Skip' }
+                    { userEnteredValue: 'Interested' },
+                    { userEnteredValue: 'Applied' },
+                    { userEnteredValue: 'Interview' },
+                    { userEnteredValue: 'Offer' },
+                    { userEnteredValue: 'Skip' }
                   ]
                 },
                 showCustomUi: true,
@@ -209,7 +222,7 @@ async function updateSheet(jobs) {
       }
     });
 
-    console.log(`✅ Google Sheet updated with ${jobs.length} new jobs`);
+    console.log(`Google Sheet updated with ${jobs.length} new jobs`);
     return `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
 
   } catch (err) {
