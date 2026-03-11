@@ -7,23 +7,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ─── Keywords to search ───────────────────────────────────────────────────────
 const SEARCH_KEYWORDS = [
-  'Product Manager B2B SaaS',
   'AI Product Manager',
-  'Senior Product Manager SaaS',
   'Associate Product Manager',
   'Product Manager Growth',
   'Technical Product Manager',
-  'Product Manager remote',
   'Product Manager AI ML',
-  // Broader searches that match your background
-  'Product Lead SaaS',
   'Product Owner agile',
   'Growth Product Manager',
-  'Platform Product Manager',
-  'Product Manager fintech',
-  'Product Manager startup',
-  'Product Manager OpenAI',
-  'Product Manager LLM AI'
+  'Platform Product Manager'
 ];
 
 // ─── Fetch from JSearch ───────────────────────────────────────────────────────
