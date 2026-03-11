@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Job Search Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f7f5f0;
+  --bg2: #eeeae2;
+  --surface: #ffffff;
+  --ink: #1c1a16;
+  --ink2: #514d44;
+  --ink3: #9e998e;
+  --ink4: #ccc8be;
+  --border: #e2ddd4;
+  --accent: #c8420e;
+  --accent-bg: #fdf1ec;
+  --green: #1a6e3c;
+  --green-bg: #eaf5ef;
+  --blue: #1a4fa8;
+  --blue-bg: #eaf0fb;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ─── Noise texture overlay ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
+
+.page { position: relative; z-index: 1; }
+
+/* ─── Nav ─── */
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 48px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(247,245,240,0.9);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+
+.nav-mark {
+  width: 34px; height: 34px;
+  background: var(--ink);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.nav-name {
+  font-size: 14px; font-weight: 600;
+  color: var(--ink); letter-spacing: -0.2px;
+}
+
+.nav-links { display: flex; align-items: center; gap: 8px; }
+
+.nav-link {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.nav-link-ghost { color: var(--ink2); }
+.nav-link-ghost:hover { background: var(--bg2); color: var(--ink); }
+
+.nav-link-solid {
+  background: var(--ink); color: #fff;
+}
+.nav-link-solid:hover { background: #2d2a24; }
+
+/* ─── Hero ─── */
+.hero {
+  max-width: 1100px; margin: 0 auto;
+  padding: 100px 48px 80px;
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 80px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; gap: 48px; padding: 64px 24px; }
+  nav { padding: 16px 24px; }
+}
+
+.hero-left {}
+
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--green-bg);
+  border: 1px solid #b8dfc9;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11px; font-weight: 500;
+  color: var(--green);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.5px;
+  margin-bottom: 28px;
+}
+
+.hero-tag-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: livepulse 2s infinite;
+}
+
+@keyframes livepulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+h1 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(42px, 5.5vw, 68px);
+  line-height: 1.0;
+  letter-spacing: -2px;
+  color: var(--ink);
+  margin-bottom: 24px;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.hero-desc {
+  font-size: 17px;
+  color: var(--ink2);
+  line-height: 1.7;
+  font-weight: 400;
+  max-width: 480px;
+  margin-bottom: 40px;
+}
+
+.hero-ctas {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--ink); color: #fff;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-size: 14px; font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+  letter-spacing: -0.2px;
+}
+.cta-primary:hover { background: #2d2a24; transform: translateY(-1px); }
+
+.cta-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface); color: var(--ink2);
+  border: 1px solid var(--border);
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.cta-secondary:hover { border-color: var(--ink); color: var(--ink); transform: translateY(-1px); }
+
+/* ─── Hero card ─── */
+.hero-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(28,26,22,0.08), 0 1px 4px rgba(28,26,22,0.04);
+}
+
+.card-topbar {
+  background: var(--ink);
+  padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.card-dots { display: flex; gap: 6px; }
+.card-dot { width: 10px; height: 10px; border-radius: 50%; }
+.card-dot:nth-child(1) { background: #ff5f57; }
+.card-dot:nth-child(2) { background: #febc2e; }
+.card-dot:nth-child(3) { background: #28c840; }
+
+.card-title-bar {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: #888;
+  letter-spacing: 0.5px;
+}
+
+.card-body { padding: 20px; }
+
+.digest-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.digest-title {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+}
+
+.digest-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--ink3);
+}
+
+.digest-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; margin-bottom: 16px;
+}
+
+.stat-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.stat-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px; font-weight: 500;
+  color: var(--ink);
+  display: block;
+}
+
+.stat-num.green { color: var(--green); }
+.stat-num.orange { color: var(--accent); }
+
+.stat-label {
+  font-size: 10px; color: var(--ink3);
+  display: block; margin-top: 2px;
+}
+
+.job-list { display: flex; flex-direction: column; gap: 8px; }
+
+.job-row {
+  display: flex; align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: slideUp 0.4s ease forwards;
+}
+
+.job-row:nth-child(1) { animation-delay: 0.1s; }
+.job-row:nth-child(2) { animation-delay: 0.2s; }
+.job-row:nth-child(3) { animation-delay: 0.3s; }
+.job-row:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.job-info { flex: 1; min-width: 0; }
+
+.job-title-text {
+  font-size: 12px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.job-company {
+  font-size: 11px; color: var(--ink3); margin-top: 1px;
+}
+
+.score-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.score-high { background: var(--green-bg); color: var(--green); border: 1px solid #b8dfc9; }
+.score-mid { background: var(--blue-bg); color: var(--blue); border: 1px solid #c0d4f5; }
+.score-low { background: var(--accent-bg); color: var(--accent); border: 1px solid #f5c4a8; }
+
+/* ─── How it works ─── */
+.section {
+  max-width: 1100px; margin: 0 auto;
+  padding: 80px 48px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 900px) {
+  .section { padding: 60px 24px; }
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--accent);
+  letter-spacing: 2px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: var(--border);
+  max-width: 60px;
+}
+
+.section-heading {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(28px, 3.5vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+
+.section-sub {
+  font-size: 16px; color: var(--ink2); line-height: 1.65;
+  max-width: 520px; margin-bottom: 56px;
+  font-weight: 400;
+}
+
+/* Steps */
+.steps { display: flex; flex-direction: column; gap: 0; }
+
+.step {
+  display: grid; grid-template-columns: 56px 1fr;
+  gap: 24px; padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 36px; color: var(--ink4);
+  line-height: 1; padding-top: 4px;
+  font-style: italic;
+}
+
+.step-content {}
+
+.step-title {
+  font-size: 16px; font-weight: 600; color: var(--ink);
+  margin-bottom: 6px; letter-spacing: -0.2px;
+}
+
+.step-desc {
+  font-size: 14px; color: var(--ink2); line-height: 1.65;
+}
+
+.step-tag {
+  display: inline-block;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--ink3);
+  margin-top: 8px;
+}
+
+/* ─── Features grid ─── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 800px) {
+  .features-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 500px) {
+  .features-grid { grid-template-columns: 1fr; }
+}
+
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 20px rgba(28,26,22,0.08);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  font-size: 24px; margin-bottom: 14px;
+  display: block;
+}
+
+.feature-title {
+  font-size: 14px; font-weight: 600; color: var(--ink);
+  margin-bottom: 8px; letter-spacing: -0.2px;
+}
+
+.feature-desc {
+  font-size: 13px; color: var(--ink3); line-height: 1.6;
+}
+
+/* ─── Stack section ─── */
+.stack-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .stack-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.stack-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.stack-layer {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--ink4);
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.stack-tech {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+}
+
+/* ─── CTA banner ─── */
+.cta-banner {
+  max-width: 1100px; margin: 0 auto 80px;
+  padding: 0 48px;
+}
+
+@media (max-width: 900px) {
+  .cta-banner { padding: 0 24px; }
+}
+
+.cta-inner {
+  background: var(--ink);
+  border-radius: 20px;
+  padding: 56px 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 32px; flex-wrap: wrap;
+}
+
+.cta-inner h2 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(24px, 3vw, 38px);
+  color: #fff;
+  letter-spacing: -1px;
+  line-height: 1.15;
+}
+
+.cta-inner h2 em { font-style: italic; color: #f5c4a8; }
+
+.cta-inner-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.cta-btn-white {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #fff; color: var(--ink);
+  padding: 13px 22px; border-radius: 9px;
+  font-size: 14px; font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.cta-btn-white:hover { opacity: 0.9; }
+
+.cta-btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 13px 22px; border-radius: 9px;
+  font-size: 14px; font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+.cta-btn-outline:hover { border-color: rgba(255,255,255,0.6); }
+
+/* ─── Footer ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+
+@media (max-width: 700px) { footer { padding: 24px; } }
+
+.footer-left {
+  font-size: 13px; color: var(--ink3);
+}
+
+.footer-links { display: flex; gap: 20px; }
+.footer-link {
+  font-size: 13px; color: var(--ink3); text-decoration: none;
+  transition: color 0.15s;
+}
+.footer-link:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- Nav -->
+<nav>
+  <a href="/" class="nav-brand">
+    <div class="nav-mark">⚡</div>
+    <span class="nav-name">Job Search Agent</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works" class="nav-link nav-link-ghost">How it works</a>
+    <a href="https://docs.google.com/spreadsheets/d/1PIlntQremVLoruOrVg6DrOIhXQlh3Wb0HVf-IzZLAaA" target="_blank" class="nav-link nav-link-ghost">My Sheet</a>
+    <a href="/tailor.html" class="nav-link nav-link-solid">Tailor Resume →</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-tag">
+      <div class="hero-tag-dot"></div>
+      Running daily · 6 PM EST
+    </div>
+    <h1>Your job search,<br>on <em>autopilot.</em></h1>
+    <p class="hero-desc">
+      An AI agent that searches job boards every day, scores every listing against your resume using GPT-4o, and sends you a ranked digest — so you only see the roles worth applying to.
+    </p>
+    <div class="hero-ctas">
+      <a href="/tailor.html" class="cta-primary">✦ Tailor My Resume</a>
+      <a href="https://docs.google.com/spreadsheets/d/1PIlntQremVLoruOrVg6DrOIhXQlh3Wb0HVf-IzZLAaA" target="_blank" class="cta-secondary">📊 View Job Tracker</a>
+    </div>
+  </div>
+
+  <!-- Live preview card -->
+  <div class="hero-card">
+    <div class="card-topbar">
+      <div class="card-dots">
+        <div class="card-dot"></div>
+        <div class="card-dot"></div>
+        <div class="card-dot"></div>
+      </div>
+      <div class="card-title-bar">daily-digest.email</div>
+      <div style="width:52px;"></div>
+    </div>
+    <div class="card-body">
+      <div class="digest-header">
+        <div class="digest-title">⚡ Today's Job Digest</div>
+        <div class="digest-date">Wed Mar 11, 2026</div>
+      </div>
+      <div class="digest-stats">
+        <div class="stat-box">
+          <span class="stat-num green">50</span>
+          <span class="stat-label">New Jobs</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num orange">12</span>
+          <span class="stat-label">Excellent</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num">95%</span>
+          <span class="stat-label">Top Score</span>
+        </div>
+      </div>
+      <div class="job-list">
+        <div class="job-row">
+          <div class="job-info">
+            <div class="job-title-text">Principal PM, Continuous Delivery</div>
+            <div class="job-company">GitLab · Remote</div>
+          </div>
+          <div class="score-pill score-high">95%</div>
+        </div>
+        <div class="job-row">
+          <div class="job-info">
+            <div class="job-title-text">AI Product Manager</div>
+            <div class="job-company">Scale AI · Washington DC</div>
+          </div>
+          <div class="score-pill score-high">90%</div>
+        </div>
+        <div class="job-row">
+          <div class="job-info">
+            <div class="job-title-text">Senior PM, Marketplace Growth</div>
+            <div class="job-company">Jerry Insurance · San Jose</div>
+          </div>
+          <div class="score-pill score-mid">85%</div>
+        </div>
+        <div class="job-row">
+          <div class="job-info">
+            <div class="job-title-text">Staff PM · Generative AI Solutions</div>
+            <div class="job-company">EDB · Remote</div>
+          </div>
+          <div class="score-pill score-mid">82%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="section" id="how-it-works">
+  <div class="section-label">How it works</div>
+  <h2 class="section-heading">From job boards to<br>your inbox, automatically.</h2>
+  <p class="section-sub">Every evening the agent wakes up, does the work, and sends you only what matters.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Searches 3 job boards simultaneously</div>
+        <div class="step-desc">Pulls listings from JSearch (LinkedIn, Indeed, ZipRecruiter, Glassdoor), Remotive, and Jobicy — filtered to PM roles only.</div>
+        <span class="step-tag">node-cron · 6 PM EST daily</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Deduplicates across all previous runs</div>
+        <div class="step-desc">Tracks every job ever seen in a persistent file. The same listing will never appear in your digest twice.</div>
+        <span class="step-tag">seen_jobs.json · persistent storage</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Scores every listing with GPT-4o</div>
+        <div class="step-desc">Each job is scored 0–100 against the candidate resume. GPT-4o understands context — not just keyword overlap.</div>
+        <span class="step-tag">OpenAI GPT-4o · batch scoring</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <div class="step-title">Updates Google Sheet + sends email digest</div>
+        <div class="step-desc">Top 50 jobs appended to a tracker with status dropdowns. Email digest sent with apply links and match scores.</div>
+        <span class="step-tag">Google Sheets API · SendGrid</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section">
+  <div class="section-label">Features</div>
+  <h2 class="section-heading">Everything you need.<br>Nothing you don't.</h2>
+  <p class="section-sub">Built for a PM job search. Opinionated by design.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">🧠</span>
+      <div class="feature-title">GPT-4o Resume Matching</div>
+      <div class="feature-desc">Semantic scoring — not keyword matching. Understands why your background fits the role.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔁</span>
+      <div class="feature-title">Zero Duplicates</div>
+      <div class="feature-desc">Persistent deduplication across every run. See each job exactly once, ever.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">Google Sheet Tracker</div>
+      <div class="feature-desc">Status dropdowns, batch history, apply links — full pipeline in one place.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">✉️</span>
+      <div class="feature-title">Daily Email Digest</div>
+      <div class="feature-desc">Ranked job cards with match scores delivered every evening at 6 PM.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">✦</span>
+      <div class="feature-title">Resume Tailor</div>
+      <div class="feature-desc">Paste any JD → get your resume rewritten to match that exact role → download PDF.</div>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⚙️</span>
+      <div class="feature-title">Fully Automated</div>
+      <div class="feature-desc">Runs 24/7 on Render. No laptop required. One daily email is all you check.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Stack -->
+<section class="section">
+  <div class="section-label">Tech Stack</div>
+  <h2 class="section-heading">Built on simple,<br>reliable infrastructure.</h2>
+  <p class="section-sub">No over-engineering. Every choice has a reason.</p>
+
+  <div class="stack-grid">
+    <div class="stack-item">
+      <div class="stack-layer">Runtime</div>
+      <div class="stack-tech">Node.js + Express</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">AI</div>
+      <div class="stack-tech">OpenAI GPT-4o</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">Job Data</div>
+      <div class="stack-tech">JSearch + Remotive + Jobicy</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">Tracker</div>
+      <div class="stack-tech">Google Sheets API</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">Email</div>
+      <div class="stack-tech">SendGrid</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">Scheduler</div>
+      <div class="stack-tech">node-cron</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">Deploy</div>
+      <div class="stack-tech">Render</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-layer">Dedup</div>
+      <div class="stack-tech">Persistent JSON</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Banner -->
+<div class="cta-banner">
+  <div class="cta-inner">
+    <h2>Ready to apply?<br><em>Start with the right resume.</em></h2>
+    <div class="cta-inner-actions">
+      <a href="/tailor.html" class="cta-btn-white">✦ Tailor My Resume</a>
+      <a href="https://docs.google.com/spreadsheets/d/1PIlntQremVLoruOrVg6DrOIhXQlh3Wb0HVf-IzZLAaA" target="_blank" class="cta-btn-outline">Open Job Tracker →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-left">Built by A.V.S Sri Harsha · AI PM · Atlanta, GA</div>
+  <div class="footer-links">
+    <a href="https://www.linkedin.com/in/avs-sri-harsha" target="_blank" class="footer-link">LinkedIn</a>
+    <a href="https://github.com/harsha4474/job-agent" target="_blank" class="footer-link">GitHub</a>
+    <a href="https://prd-generator-o5u2.onrender.com" target="_blank" class="footer-link">PRD Generator</a>
+  </div>
+</footer>
+
+</div>
+</body>
+</html>
