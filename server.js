@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const { runJobAgent } = require('./agent');
@@ -12,33 +13,74 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-memory cross-batch dedup (resets on server restart)
-const seenJobKeys = new Set();
+// ─── Persistent dedup using a JSON file ──────────────────
+const SEEN_FILE = path.join(__dirname, 'seen_jobs.json');
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'running', time: new Date().toISOString() });
+function loadSeenJobs() {
+  try {
+    if (fs.existsSync(SEEN_FILE)) {
+      var data = JSON.parse(fs.readFileSync(SEEN_FILE, 'utf8'));
+      return new Set(data);
+    }
+  } catch (e) {
+    console.error('Could not load seen_jobs.json:', e.message);
+  }
+  return new Set();
+}
+
+function saveSeenJobs(seenSet) {
+  try {
+    fs.writeFileSync(SEEN_FILE, JSON.stringify(Array.from(seenSet)), 'utf8');
+  } catch (e) {
+    console.error('Could not save seen_jobs.json:', e.message);
+  }
+}
+
+// Keep max 2000 entries to prevent file bloat (drop oldest)
+function pruneSeenJobs(seenSet, maxSize) {
+  if (seenSet.size > maxSize) {
+    var arr = Array.from(seenSet);
+    var trimmed = arr.slice(arr.length - maxSize);
+    return new Set(trimmed);
+  }
+  return seenSet;
+}
+
+app.get('/health', function(req, res) {
+  var seen = loadSeenJobs();
+  res.json({ status: 'running', time: new Date().toISOString(), seenJobsTracked: seen.size });
 });
 
-app.post('/run-agent', async (req, res) => {
+app.post('/run-agent', async function(req, res) {
   res.json({ message: 'Agent started! Check your email and Google Sheet in a few minutes.' });
+
   try {
     console.log('\n🚀 Starting job search agent run...');
     console.log('⏰ Time: ' + new Date().toLocaleString());
 
-    const allJobs = await runJobAgent();
+    var allJobs = await runJobAgent();
 
-    // Deduplicate against previously seen jobs this session
-    const newJobs = allJobs.filter(function(job) {
+    // Load persistent seen jobs
+    var seenKeys = loadSeenJobs();
+    var beforeCount = seenKeys.size;
+
+    // Filter to only genuinely new jobs
+    var newJobs = allJobs.filter(function(job) {
       var key = job.title.toLowerCase().trim() + '||' + job.company.toLowerCase().trim();
-      if (seenJobKeys.has(key)) return false;
-      seenJobKeys.add(key);
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
       return true;
     });
 
-    console.log('🆕 New jobs (cross-batch dedup): ' + newJobs.length);
+    console.log('🔎 Seen jobs tracked: ' + beforeCount);
+    console.log('🆕 New jobs this run: ' + newJobs.length);
+
+    // Save updated seen keys
+    seenKeys = pruneSeenJobs(seenKeys, 2000);
+    saveSeenJobs(seenKeys);
 
     if (newJobs.length === 0) {
-      console.log('✅ No new jobs — all already tracked.');
+      console.log('✅ No new jobs found — all already tracked. Skipping sheet + email.');
       return;
     }
 
@@ -48,12 +90,13 @@ app.post('/run-agent', async (req, res) => {
     console.log('✅ Agent run complete!');
     console.log('📊 Sheet: ' + sheetUrl);
     console.log('📧 Email sent to: ' + process.env.RECIPIENT_EMAIL);
+
   } catch (err) {
     console.error('❌ Agent run failed:', err.message);
   }
 });
 
-app.post('/tailor-resume', async (req, res) => {
+app.post('/tailor-resume', async function(req, res) {
   try {
     var jobDescription = req.body.jobDescription;
     var jobTitle = req.body.jobTitle;
@@ -77,6 +120,16 @@ app.post('/tailor-resume', async (req, res) => {
   } catch (err) {
     console.error('Tailor error:', err.message);
     res.status(500).json({ error: 'Failed to tailor resume: ' + err.message });
+  }
+});
+
+// Reset seen jobs (use if you want a fresh start)
+app.post('/reset-seen', function(req, res) {
+  try {
+    fs.writeFileSync(SEEN_FILE, '[]', 'utf8');
+    res.json({ message: 'Seen jobs reset. Next run will fetch all jobs fresh.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
