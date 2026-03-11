@@ -61,7 +61,7 @@ async function fetchJSearchJobs(keyword) {
 async function fetchRemotiveJobs() {
   try {
     const response = await axios.get('https://remotive.com/api/remote-jobs', {
-      params: { category: 'product', limit: 50 }
+      params: { category: 'product-management', limit: 50 }
     });
     return (response.data.jobs || []).map(job => ({
       title: job.title || '',
@@ -93,11 +93,16 @@ function deduplicateJobs(jobs) {
 // ─── Filter out irrelevant roles ──────────────────────────────────────────────
 function filterRelevantJobs(jobs) {
   const includeKeywords = [
-  'product manager', 'product management', 'associate pm', 'apm',
-  'senior pm', 'technical pm', 'product lead', 'group product manager',
-  'director of product', 'vp product', 'head of product',
-  'product owner', 'growth manager', 'platform manager',
-  'product strategist', 'product operations'
+  const SEARCH_KEYWORDS = [
+  'AI Product Manager',
+  'Associate Product Manager',
+  'Product Manager Growth',
+  'Technical Product Manager',
+  'Product Manager AI ML',
+  'Product Owner agile',
+  'Growth Product Manager',
+  'Platform Product Manager'
+];
 ];
   const excludeKeywords = [
     'marketing manager', 'sales manager', 'account manager', 'project manager',
@@ -180,7 +185,7 @@ No explanation, just the array.`
     }
 
     if (i + batchSize < jobs.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
 
