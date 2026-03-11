@@ -1,258 +1,715 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Resume Tailor — AI Powered</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    :root {
-      --bg: #07090c;
-      --surface: #0d1117;
-      --surface2: #131920;
-      --border: #1c2530;
-      --border2: #243040;
-      --accent: #f0c040;
-      --accent2: #c49a20;
-      --green: #3dd68c;
-      --text: #e2e8f0;
-      --text2: #7a8fa6;
-      --text3: #3a4f66;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    header {
-      position: relative; z-index: 10; padding: 20px 40px;
-      border-bottom: 1px solid var(--border); background: rgba(7,9,12,0.9);
-      backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-between;
-    }
-    .logo { display: flex; align-items: center; gap: 12px; }
-    .logo-mark {
-      width: 34px; height: 34px; background: var(--accent);
-      border-radius: 8px; display: flex; align-items: center;
-      justify-content: center; font-size: 16px; color: #07090c; font-weight: 800;
-    }
-    .logo-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: var(--text); }
-    .logo-name span { color: var(--accent); }
-    .header-tag {
-      font-family: 'DM Mono', monospace; font-size: 10px; color: var(--accent);
-      background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.2);
-      padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px;
-    }
-    .main {
-      max-width: 1200px; margin: 0 auto; padding: 40px;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
-    }
-    @media (max-width: 900px) { .main { grid-template-columns: 1fr; padding: 24px 20px; } }
-    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-    .panel-head {
-      padding: 18px 24px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 10px;
-    }
-    .panel-icon {
-      width: 28px; height: 28px; background: rgba(240,192,64,0.1);
-      border: 1px solid rgba(240,192,64,0.2); border-radius: 7px;
-      display: flex; align-items: center; justify-content: center; font-size: 13px;
-    }
-    .panel-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
-    .panel-body { padding: 24px; }
-    .job-bar {
-      background: var(--surface2); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
-      display: flex; align-items: center; gap: 14px;
-    }
-    .job-bar-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
-    .job-bar-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
-    .job-bar-company { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; margin-top: 2px; }
-    label {
-      display: block; font-family: 'DM Mono', monospace; font-size: 10px;
-      color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
-    }
-    textarea, input {
-      width: 100%; background: var(--bg); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 12px 16px; color: var(--text);
-      font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none;
-      transition: border-color 0.2s; resize: vertical;
-    }
-    textarea:focus, input:focus { border-color: var(--accent); }
-    textarea::placeholder, input::placeholder { color: var(--text3); }
-    #jd-input { min-height: 280px; line-height: 1.6; }
-    .form-group { margin-bottom: 18px; }
-    .tailor-btn {
-      width: 100%; background: var(--accent); color: #07090c; border: none;
-      border-radius: 10px; padding: 14px; font-family: 'Syne', sans-serif;
-      font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s;
-    }
-    .tailor-btn:hover { background: var(--accent2); transform: translateY(-1px); }
-    .tailor-btn:disabled { background: var(--border2); color: var(--text3); cursor: not-allowed; transform: none; }
-    .loading-bar { display: none; margin-top: 16px; background: var(--surface2); border-radius: 6px; height: 3px; overflow: hidden; }
-    .loading-bar.visible { display: block; }
-    .loading-bar-fill {
-      height: 100%; background: linear-gradient(90deg, var(--accent), var(--green));
-      border-radius: 6px; animation: loadingAnim 1.5s ease-in-out infinite;
-    }
-    @keyframes loadingAnim {
-      0% { width: 0%; margin-left: 0; }
-      50% { width: 70%; margin-left: 15%; }
-      100% { width: 0%; margin-left: 100%; }
-    }
-    .loading-text {
-      display: none; text-align: center; margin-top: 12px;
-      font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3);
-    }
-    .loading-text.visible { display: block; }
-    .output-empty { padding: 60px 24px; text-align: center; color: var(--text3); }
-    .output-empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.3; }
-    .output-empty-title { font-family: 'Syne', sans-serif; font-size: 14px; color: var(--text3); margin-bottom: 6px; }
-    .output-empty-sub { font-size: 12px; line-height: 1.6; max-width: 220px; margin: 0 auto; }
-    #resume-output { display: none; padding: 24px; }
-    #resume-output.visible { display: block; }
-    .resume-section { margin-bottom: 22px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
-    .resume-section:last-child { border-bottom: none; margin-bottom: 0; }
-    .resume-section-label {
-      font-family: 'DM Mono', monospace; font-size: 9px; color: var(--accent);
-      letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px;
-    }
-    .resume-section-content { font-size: 13px; line-height: 1.75; color: var(--text2); white-space: pre-wrap; }
-    .export-bar { display: none; padding: 16px 24px; border-top: 1px solid var(--border); gap: 10px; background: var(--surface); }
-    .export-bar.visible { display: flex; }
-    .export-btn {
-      flex: 1; padding: 11px; border-radius: 9px; border: 1px solid var(--border2);
-      background: transparent; color: var(--text2); font-family: 'DM Mono', monospace;
-      font-size: 11px; cursor: pointer; transition: all 0.2s;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-    }
-    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .export-btn.primary { background: var(--green); color: #07090c; border-color: var(--green); font-weight: 600; }
-    .export-btn.primary:hover { background: #2db878; }
-    .match-badge {
-      display: none; margin-left: auto; font-family: 'DM Mono', monospace; font-size: 11px;
-      color: var(--green); background: rgba(61,214,140,0.1);
-      border: 1px solid rgba(61,214,140,0.2); padding: 3px 10px; border-radius: 20px;
-    }
-    .match-badge.visible { display: block; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume Tailor — Job Search Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #faf9f7;
+  --bg2: #f4f2ee;
+  --bg3: #edeae4;
+  --ink: #1a1714;
+  --ink2: #4a4540;
+  --ink3: #9a948c;
+  --ink4: #c4bfb8;
+  --accent: #d4580a;
+  --accent-light: #fdf0e8;
+  --accent-mid: #f5c4a0;
+  --blue: #2563a8;
+  --blue-light: #eaf0fa;
+  --green: #1a7a4a;
+  --green-light: #e8f5ee;
+  --border: #e2ddd6;
+  --border2: #d0cac2;
+  --shadow: 0 1px 3px rgba(26,23,20,0.06), 0 4px 16px rgba(26,23,20,0.04);
+  --shadow-lg: 0 2px 8px rgba(26,23,20,0.08), 0 16px 48px rgba(26,23,20,0.08);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* Subtle texture overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23faf9f7'/%3E%3Crect width='1' height='1' x='0' y='0' fill='%231a1714' opacity='0.015'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 32px 80px;
+}
+
+/* ─── Top bar ─────────────────────────────────────────── */
+.topbar {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 32px; height: 32px;
+  background: var(--ink);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.topbar-nav a {
+  font-size: 13px;
+  color: var(--ink3);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.topbar-nav a:hover { color: var(--ink); }
+
+.topbar-badge {
+  background: var(--accent-light);
+  border: 1px solid var(--accent-mid);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ─── Hero ────────────────────────────────────────────── */
+.hero {
+  padding: 64px 0 52px;
+  max-width: 640px;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.eyebrow-line {
+  width: 32px;
+  height: 1px;
+  background: var(--accent);
+}
+
+.eyebrow-text {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -1px;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+
+.hero h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.hero p {
+  font-size: 16px;
+  color: var(--ink2);
+  line-height: 1.65;
+  font-weight: 300;
+  max-width: 480px;
+}
+
+/* ─── Job badge ───────────────────────────────────────── */
+.job-badge {
+  display: none;
+  background: var(--blue-light);
+  border: 1px solid #bfcfe8;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.job-badge-icon {
+  width: 36px; height: 36px;
+  background: var(--blue);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.job-badge-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 1px;
+}
+
+.job-badge-company {
+  font-size: 12px;
+  color: var(--ink3);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ─── Main grid ───────────────────────────────────────── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .wrapper { padding: 0 20px 60px; }
+}
+
+/* ─── Panels ──────────────────────────────────────────── */
+.panel {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-label {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--ink3);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-label::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.panel-body { padding: 24px; }
+
+/* ─── Form elements ───────────────────────────────────── */
+.field {
+  margin-bottom: 20px;
+}
+
+.field:last-of-type { margin-bottom: 0; }
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink2);
+  margin-bottom: 7px;
+  letter-spacing: 0.1px;
+}
+
+input[type="text"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212,88,10,0.08);
+}
+
+input[type="text"]::placeholder { color: var(--ink4); }
+
+textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink2);
+  resize: vertical;
+  min-height: 260px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212,88,10,0.08);
+}
+
+textarea::placeholder { color: var(--ink4); }
+
+.row-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* ─── Generate button ─────────────────────────────────── */
+.btn-generate {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px 20px;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.1px;
+}
+
+.btn-generate:hover { background: #2d2925; transform: translateY(-1px); }
+.btn-generate:active { transform: translateY(0); }
+.btn-generate:disabled { background: var(--ink4); cursor: not-allowed; transform: none; }
+
+.btn-icon { font-size: 16px; }
+
+/* ─── Error ───────────────────────────────────────────── */
+.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+
+/* ─── Output panel ────────────────────────────────────── */
+.output-panel {
+  position: sticky;
+  top: 24px;
+}
+
+.output-status {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--ink4);
+}
+
+.output-status.ready {
+  color: var(--green);
+}
+
+/* Empty state */
+.output-empty {
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.output-empty-illustration {
+  width: 64px; height: 64px;
+  background: var(--bg2);
+  border: 1px dashed var(--border2);
+  border-radius: 16px;
+  margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+
+.output-empty p {
+  font-size: 13px;
+  color: var(--ink3);
+  line-height: 1.6;
+}
+
+.output-empty p strong {
+  color: var(--ink2);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Loading */
+.output-loading {
+  padding: 56px 24px;
+  text-align: center;
+  display: none;
+}
+
+.spinner-track {
+  width: 44px; height: 44px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-label {
+  font-size: 13px;
+  color: var(--ink2);
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.lstep {
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--ink4);
+  opacity: 0;
+  animation: stepIn 0.4s ease forwards;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lstep::before {
+  content: '→';
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.lstep:nth-child(1) { animation-delay: 0.4s; }
+.lstep:nth-child(2) { animation-delay: 2.2s; }
+.lstep:nth-child(3) { animation-delay: 4.2s; }
+.lstep:nth-child(4) { animation-delay: 6.5s; }
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Output content */
+#output-content {
+  padding: 24px;
+  max-height: 580px;
+  overflow-y: auto;
+  display: none;
+}
+
+#output-content::-webkit-scrollbar { width: 4px; }
+#output-content::-webkit-scrollbar-track { background: transparent; }
+#output-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.section-block {
+  margin-bottom: 28px;
+}
+
+.section-block:last-child { margin-bottom: 0; }
+
+.section-title {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-body {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.75;
+  font-weight: 300;
+}
+
+.section-body strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.section-body .bullet {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  align-items: flex-start;
+}
+
+.section-body .bullet::before {
+  content: '—';
+  color: var(--accent);
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* Output actions */
+.output-actions {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: none;
+  gap: 10px;
+  background: var(--bg);
+}
+
+.btn-sm {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-copy {
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--ink2);
+}
+.btn-copy:hover { border-color: var(--ink); color: var(--ink); }
+
+.btn-download {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+}
+.btn-download:hover { background: #b84808; }
+
+</style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-mark">AI</div>
-    <div class="logo-name">Resume<span>.</span>Tailor</div>
+<div class="wrapper">
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="#" class="brand">
+      <div class="brand-mark">⚡</div>
+      <span class="brand-name">Job Search Agent</span>
+    </a>
+    <div class="topbar-nav">
+      <a href="#">Dashboard</a>
+      <a href="#">Sheet</a>
+      <span class="topbar-badge">GPT-4o</span>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <div class="eyebrow-line"></div>
+      <span class="eyebrow-text">Resume Tailor</span>
+    </div>
+    <h1>Match every job<br>with <em>precision.</em></h1>
+    <p>Paste any job description and get a resume rewritten by GPT-4o — tailored to the exact role, mirroring the language that gets callbacks.</p>
   </div>
-  <div class="header-tag">GPT-4o POWERED</div>
-</header>
 
-<div class="main">
-
-  <!-- Left Panel -->
-  <div>
-    <div class="panel">
-      <div class="panel-head">
-        <div class="panel-icon">📋</div>
-        <div class="panel-title">Job Details</div>
-        <div class="match-badge" id="match-badge">Tailored</div>
-      </div>
-      <div class="panel-body">
-
-        <div class="job-bar" id="job-bar" style="display:none">
-          <div class="job-bar-dot"></div>
-          <div>
-            <div class="job-bar-title" id="job-title-display">—</div>
-            <div class="job-bar-company" id="job-company-display">—</div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Job Title</label>
-          <input type="text" id="job-title" placeholder="e.g. AI Product Manager"/>
-        </div>
-
-        <div class="form-group">
-          <label>Company</label>
-          <input type="text" id="job-company" placeholder="e.g. OpenAI"/>
-        </div>
-
-        <div class="form-group">
-          <label>Job Description</label>
-          <textarea id="jd-input" placeholder="Paste the full job description here..."></textarea>
-        </div>
-
-        <button class="tailor-btn" id="tailor-btn">Tailor My Resume</button>
-
-        <div class="loading-bar" id="loading-bar"><div class="loading-bar-fill"></div></div>
-        <div class="loading-text" id="loading-text">GPT-4o is tailoring your resume...</div>
-
-      </div>
+  <!-- Job badge (auto-filled from Sheet) -->
+  <div class="job-badge" id="job-badge" style="display:none;">
+    <div class="job-badge-icon">💼</div>
+    <div>
+      <div class="job-badge-title" id="badge-title"></div>
+      <div class="job-badge-company" id="badge-company"></div>
     </div>
   </div>
 
-  <!-- Right Panel -->
-  <div style="display:flex; flex-direction:column;">
-    <div class="panel" style="flex:1; display:flex; flex-direction:column;">
-      <div class="panel-head">
-        <div class="panel-icon">📄</div>
-        <div class="panel-title">Tailored Resume</div>
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Input panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Job Details</span>
+      </div>
+      <div class="panel-body">
+        <div class="row-fields">
+          <div class="field">
+            <label>Job Title</label>
+            <input type="text" id="job-title" placeholder="Senior PM">
+          </div>
+          <div class="field">
+            <label>Company</label>
+            <input type="text" id="company" placeholder="Anthropic">
+          </div>
+        </div>
+        <div class="field">
+          <label>Job Description <span style="color:var(--accent)">*</span></label>
+          <textarea id="jd-input" placeholder="Paste the full job description here...
+
+The more context you give, the better the tailoring."></textarea>
+        </div>
+        <button class="btn-generate" id="tailor-btn">
+          <span class="btn-icon">✦</span>
+          <span id="btn-text">Generate Tailored Resume</span>
+        </button>
+        <div class="error" id="error-msg"></div>
+      </div>
+    </div>
+
+    <!-- Output panel -->
+    <div class="panel output-panel">
+      <div class="panel-header">
+        <span class="panel-label" style="--dot-color:var(--blue);">Tailored Output</span>
+        <span class="output-status" id="output-status">Waiting for input</span>
       </div>
 
-      <div id="output-empty" class="output-empty">
-        <div class="output-empty-icon">📄</div>
-        <div class="output-empty-title">Your tailored resume will appear here</div>
-        <div class="output-empty-sub">Paste a job description and click tailor</div>
+      <!-- Empty state -->
+      <div class="output-empty" id="output-empty">
+        <div class="output-empty-illustration">📄</div>
+        <p>
+          <strong>Your tailored resume will appear here</strong>
+          Fill in the job details and paste the description to get started.
+        </p>
       </div>
 
-      <div id="resume-output"></div>
-
-      <div class="export-bar" id="export-bar">
-        <button class="export-btn" id="btn-txt">Download TXT</button>
-        <button class="export-btn primary" id="btn-pdf">Download PDF</button>
+      <!-- Loading -->
+      <div class="output-loading" id="output-loading">
+        <div class="spinner-track"></div>
+        <div class="loading-label">Analyzing job requirements...</div>
+        <div class="loading-steps">
+          <div class="lstep">Reading job description</div>
+          <div class="lstep">Matching skills & keywords</div>
+          <div class="lstep">Rewriting experience bullets</div>
+          <div class="lstep">Crafting tailored summary</div>
+        </div>
       </div>
+
+      <!-- Result -->
+      <div id="output-content"></div>
+
+      <!-- Actions -->
+      <div class="output-actions" id="output-actions">
+        <button class="btn-sm btn-copy" id="copy-btn">📋 Copy</button>
+        <button class="btn-sm btn-download" id="download-btn">⬇ Download PDF</button>
+      </div>
+
     </div>
   </div>
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-  var tailoredContent = '';
-
   // Auto-fill from URL params
-  window.onload = function() {
-    var params = new URLSearchParams(window.location.search);
-    var job = params.get('job');
-    var company = params.get('company');
-    if (job || company) {
-      document.getElementById('job-title').value = job || '';
-      document.getElementById('job-company').value = company || '';
-      document.getElementById('job-title-display').textContent = job || '';
-      document.getElementById('job-company-display').textContent = company || '';
-      document.getElementById('job-bar').style.display = 'flex';
-    }
+  var params = new URLSearchParams(window.location.search);
+  var jobParam = params.get('job');
+  var companyParam = params.get('company');
 
-    // Button event listeners
-    document.getElementById('tailor-btn').addEventListener('click', tailorResume);
-    document.getElementById('btn-txt').addEventListener('click', exportTXT);
-    document.getElementById('btn-pdf').addEventListener('click', exportPDF);
-  };
+  if (jobParam) {
+    document.getElementById('job-title').value = decodeURIComponent(jobParam);
+    document.getElementById('badge-title').textContent = decodeURIComponent(jobParam);
+    document.getElementById('job-badge').style.display = 'flex';
+  }
+  if (companyParam) {
+    document.getElementById('company').value = decodeURIComponent(companyParam);
+    document.getElementById('badge-company').textContent = decodeURIComponent(companyParam);
+  }
 
-  function tailorResume() {
+  var currentResult = '';
+
+  document.getElementById('tailor-btn').addEventListener('click', function() {
     var jd = document.getElementById('jd-input').value.trim();
     var title = document.getElementById('job-title').value.trim();
-    var company = document.getElementById('job-company').value.trim();
+    var company = document.getElementById('company').value.trim();
+    var btn = document.getElementById('tailor-btn');
+    var btnText = document.getElementById('btn-text');
+    var errorMsg = document.getElementById('error-msg');
 
     if (!jd) {
-      alert('Please paste a job description first.');
+      errorMsg.textContent = 'Please paste a job description first.';
+      errorMsg.style.display = 'block';
       return;
     }
 
-    var btn = document.getElementById('tailor-btn');
+    errorMsg.style.display = 'none';
     btn.disabled = true;
-    btn.textContent = 'Tailoring...';
-    document.getElementById('loading-bar').classList.add('visible');
-    document.getElementById('loading-text').classList.add('visible');
+    btnText.textContent = 'Generating...';
     document.getElementById('output-empty').style.display = 'none';
-    document.getElementById('resume-output').classList.remove('visible');
-    document.getElementById('export-bar').classList.remove('visible');
+    document.getElementById('output-loading').style.display = 'block';
+    document.getElementById('output-content').style.display = 'none';
+    document.getElementById('output-actions').style.display = 'none';
+    document.getElementById('output-status').textContent = 'Processing...';
+    document.getElementById('output-status').className = 'output-status';
 
     fetch('/tailor-resume', {
       method: 'POST',
@@ -261,166 +718,159 @@
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
-      if (data.error) throw new Error(data.error);
-      tailoredContent = data.tailoredResume;
-      renderResume(tailoredContent);
-    })
-    .catch(function(err) {
-      document.getElementById('output-empty').style.display = 'block';
-      document.getElementById('output-empty').querySelector('.output-empty-title').textContent = 'Error: ' + err.message;
-    })
-    .finally(function() {
       btn.disabled = false;
-      btn.textContent = 'Tailor My Resume';
-      document.getElementById('loading-bar').classList.remove('visible');
-      document.getElementById('loading-text').classList.remove('visible');
-    });
-  }
+      btnText.textContent = 'Generate Tailored Resume';
+      document.getElementById('output-loading').style.display = 'none';
 
-  function renderResume(content) {
-    var outputEl = document.getElementById('resume-output');
-    var sectionMap = {
-      'SUMMARY': 'Summary',
-      'KEY EXPERIENCE': 'Key Experience Highlights',
-      'RELEVANT SKILLS': 'Relevant Skills',
-      'WHY I': "Why I'm a Strong Fit"
-    };
-
-    var html = '';
-    var parts = content.split(/\n(?=[A-Z][A-Z\s&]+:)/);
-
-    parts.forEach(function(part) {
-      var colonIdx = part.indexOf(':');
-      if (colonIdx === -1) return;
-      var rawHeader = part.substring(0, colonIdx).trim();
-      var body = part.substring(colonIdx + 1).trim();
-      var matchKey = Object.keys(sectionMap).find(function(k) {
-        return rawHeader.toUpperCase().indexOf(k) !== -1;
-      });
-      var label = matchKey ? sectionMap[matchKey] : rawHeader;
-      html += '<div class="resume-section"><div class="resume-section-label">' + label + '</div><div class="resume-section-content">' + body + '</div></div>';
-    });
-
-    if (!html) {
-      html = '<div class="resume-section"><div class="resume-section-content">' + content + '</div></div>';
-    }
-
-    outputEl.innerHTML = html;
-    outputEl.classList.add('visible');
-    document.getElementById('export-bar').classList.add('visible');
-    document.getElementById('match-badge').classList.add('visible');
-  }
-
-  function exportTXT() {
-    if (!tailoredContent) return;
-    var title = document.getElementById('job-title').value || 'Resume';
-    var company = document.getElementById('job-company').value || '';
-    var blob = new Blob([tailoredContent], { type: 'text/plain' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = ('Tailored_Resume_' + title + '_' + company).replace(/\s+/g, '_') + '.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function exportPDF() {
-    if (!tailoredContent) return;
-    var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    var margin = 20;
-    var contentWidth = 170;
-    var y = margin;
-
-    doc.setFillColor(7, 9, 12);
-    doc.rect(0, 0, 210, 297, 'F');
-
-    doc.setFillColor(13, 17, 23);
-    doc.rect(0, 0, 210, 24, 'F');
-    doc.setFillColor(240, 192, 64);
-    doc.rect(0, 24, 210, 0.8, 'F');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(226, 232, 240);
-    doc.text('Resume.Tailor', margin, 15);
-
-    var jobTitle = document.getElementById('job-title').value || 'Tailored Resume';
-    var jobCompany = document.getElementById('job-company').value || '';
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(122, 143, 166);
-    doc.text(jobCompany ? jobTitle + ' @ ' + jobCompany : jobTitle, 190, 15, { align: 'right' });
-
-    y = 36;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(226, 232, 240);
-    doc.text('A.V.S Sri Harsha', margin, y);
-    y += 7;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(122, 143, 166);
-    doc.text('sriharsha.adda@gmail.com  |  +1(334)434-6660  |  Atlanta, GA', margin, y);
-    y += 10;
-
-    doc.setDrawColor(28, 37, 48);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, 190, y);
-    y += 10;
-
-    var parts = tailoredContent.split(/\n(?=[A-Z][A-Z\s&]+:)/);
-    parts.forEach(function(part) {
-      var colonIdx = part.indexOf(':');
-      if (colonIdx === -1) return;
-      var header = part.substring(0, colonIdx).trim();
-      var body = part.substring(colonIdx + 1).trim();
-
-      if (y > 260) {
-        doc.addPage();
-        doc.setFillColor(7, 9, 12);
-        doc.rect(0, 0, 210, 297, 'F');
-        y = margin;
+      if (data.error) {
+        errorMsg.textContent = 'Error: ' + data.error;
+        errorMsg.style.display = 'block';
+        document.getElementById('output-empty').style.display = 'block';
+        document.getElementById('output-status').textContent = 'Error';
+        return;
       }
 
-      doc.setFillColor(13, 17, 23);
-      doc.roundedRect(margin, y - 4, contentWidth, 10, 2, 2, 'F');
-      doc.setFillColor(240, 192, 64);
-      doc.rect(margin, y - 4, 2, 10, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(240, 192, 64);
-      doc.text(header.toUpperCase(), margin + 6, y + 2);
-      y += 12;
+      currentResult = data.tailoredResume;
+      renderOutput(data.tailoredResume);
+      document.getElementById('output-content').style.display = 'block';
+      document.getElementById('output-actions').style.display = 'flex';
+      document.getElementById('output-status').textContent = 'Ready';
+      document.getElementById('output-status').className = 'output-status ready';
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btnText.textContent = 'Generate Tailored Resume';
+      document.getElementById('output-loading').style.display = 'none';
+      document.getElementById('output-empty').style.display = 'block';
+      errorMsg.textContent = 'Network error. Make sure the server is running.';
+      errorMsg.style.display = 'block';
+      document.getElementById('output-status').textContent = 'Error';
+    });
+  });
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(122, 143, 166);
-      var lines = doc.splitTextToSize(body, contentWidth - 8);
-      lines.forEach(function(line) {
-        if (y > 278) {
-          doc.addPage();
-          doc.setFillColor(7, 9, 12);
-          doc.rect(0, 0, 210, 297, 'F');
-          y = margin;
+  function renderOutput(text) {
+    var container = document.getElementById('output-content');
+    container.innerHTML = '';
+    var sections = text.split(/^## /m).filter(Boolean);
+
+    sections.forEach(function(section) {
+      var lines = section.split('\n');
+      var title = lines[0].trim();
+      var body = lines.slice(1).join('\n').trim();
+
+      var block = document.createElement('div');
+      block.className = 'section-block';
+
+      var titleEl = document.createElement('div');
+      titleEl.className = 'section-title';
+      titleEl.textContent = title;
+      block.appendChild(titleEl);
+
+      var bodyEl = document.createElement('div');
+      bodyEl.className = 'section-body';
+
+      var bodyLines = body.split('\n');
+      bodyLines.forEach(function(line) {
+        line = line.trim();
+        if (!line) return;
+        if (line.startsWith('- ') || line.startsWith('• ')) {
+          var bul = document.createElement('div');
+          bul.className = 'bullet';
+          bul.textContent = line.replace(/^[-•]\s*/, '').replace(/\*\*/g, '');
+          bodyEl.appendChild(bul);
+        } else {
+          var p = document.createElement('p');
+          p.innerHTML = line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+          p.style.marginBottom = '6px';
+          bodyEl.appendChild(p);
         }
-        doc.text(line, margin + 4, y);
-        y += 5.5;
       });
-      y += 6;
+
+      block.appendChild(bodyEl);
+      container.appendChild(block);
+    });
+  }
+
+  // Copy
+  document.getElementById('copy-btn').addEventListener('click', function() {
+    navigator.clipboard.writeText(currentResult).then(function() {
+      var btn = document.getElementById('copy-btn');
+      btn.textContent = '✓ Copied!';
+      setTimeout(function() { btn.textContent = '📋 Copy'; }, 2000);
+    });
+  });
+
+  // Download PDF
+  document.getElementById('download-btn').addEventListener('click', function() {
+    if (!currentResult) return;
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    var title = document.getElementById('job-title').value || 'Tailored Resume';
+    var company = document.getElementById('company').value || '';
+
+    // White background
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, 210, 297, 'F');
+
+    // Header bar
+    doc.setFillColor(26, 23, 20);
+    doc.rect(0, 0, 210, 28, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('A.V.S Sri Harsha', 20, 12);
+
+    doc.setTextColor(180, 180, 180);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Tailored for: ' + title + (company ? '  ·  ' + company : ''), 20, 20);
+
+    var y = 40;
+    var lines = currentResult.split('\n');
+
+    lines.forEach(function(line) {
+      if (y > 278) { doc.addPage(); y = 20; }
+      line = line.trim();
+      if (!line) { y += 3; return; }
+
+      if (line.startsWith('## ')) {
+        y += 4;
+        doc.setFillColor(253, 240, 232);
+        doc.rect(18, y - 5, 174, 8, 'F');
+        doc.setTextColor(212, 88, 10);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(line.replace('## ', '').toUpperCase(), 20, y);
+        y += 8;
+      } else if (line.startsWith('- ') || line.startsWith('• ')) {
+        doc.setTextColor(60, 60, 60);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        var clean = line.replace(/^[-•]\s*/, '').replace(/\*\*/g, '');
+        var wrapped = doc.splitTextToSize('– ' + clean, 168);
+        wrapped.forEach(function(wl) {
+          if (y > 278) { doc.addPage(); y = 20; }
+          doc.text(wl, 22, y);
+          y += 5;
+        });
+      } else {
+        doc.setTextColor(40, 40, 40);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        var clean2 = line.replace(/\*\*/g, '');
+        var wrapped2 = doc.splitTextToSize(clean2, 170);
+        wrapped2.forEach(function(wl) {
+          if (y > 278) { doc.addPage(); y = 20; }
+          doc.text(wl, 20, y);
+          y += 5;
+        });
+      }
     });
 
-    doc.setFillColor(13, 17, 23);
-    doc.rect(0, 285, 210, 12, 'F');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(122, 143, 166);
-    doc.text('Generated by Resume.Tailor', margin, 292);
-
-    var filename = ('Harsha_Resume_' + jobTitle + '_' + jobCompany).replace(/\s+/g, '_').substring(0, 50);
-    doc.save(filename + '.pdf');
-  }
+    var fname = 'resume-' + (title).toLowerCase().replace(/\s+/g, '-').substring(0, 30) + '.pdf';
+    doc.save(fname);
+  });
 </script>
-
 </body>
 </html>

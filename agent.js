@@ -16,20 +16,11 @@ const SEARCH_KEYWORDS = [
   'Platform Product Manager'
 ];
 
-// ─── Fetch from JSearch ───────────────────────────────────────────────────────
 async function fetchJSearchJobs(keyword) {
   try {
-    const response = await axios.get('https://jsearch.p.rapidapi.com/search', {
-      params: {
-        query: keyword + ' USA',
-        page: '1',
-        num_pages: '2',
-        date_posted: 'today'
-      },
-      headers: {
-        'X-RapidAPI-Key': process.env.JSEARCH_API_KEY,
-        'X-RapidAPI-Host': 'jsearch.p.rapidapi.com'
-      }
+    var response = await axios.get('https://jsearch.p.rapidapi.com/search', {
+      params: { query: keyword + ' USA', page: '1', num_pages: '2', date_posted: 'today' },
+      headers: { 'X-RapidAPI-Key': process.env.JSEARCH_API_KEY, 'X-RapidAPI-Host': 'jsearch.p.rapidapi.com' }
     });
     return (response.data.data || []).map(function(job) {
       return {
@@ -37,7 +28,7 @@ async function fetchJSearchJobs(keyword) {
         company: job.employer_name || '',
         location: job.job_city ? job.job_city + ', ' + job.job_state : (job.job_is_remote ? 'Remote' : 'USA'),
         salary: job.job_min_salary ? '$' + Math.round(job.job_min_salary/1000) + 'K - $' + Math.round(job.job_max_salary/1000) + 'K' : 'Not listed',
-        description: job.job_description || '',
+        description: (job.job_description || '').substring(0, 500),
         applyLink: job.job_apply_link || job.job_google_link || '',
         source: 'JSearch',
         postedDate: job.job_posted_at_datetime_utc || ''
@@ -49,12 +40,9 @@ async function fetchJSearchJobs(keyword) {
   }
 }
 
-// ─── Fetch from Remotive ──────────────────────────────────────────────────────
 async function fetchRemotiveJobs() {
   try {
-    const response = await axios.get('https://remotive.com/api/remote-jobs', {
-      params: { category: 'product-management', limit: 50 }
-    });
+    var response = await axios.get('https://remotive.com/api/remote-jobs', { params: { category: 'product-management', limit: 50 } });
     return (response.data.jobs || []).map(function(job) {
       return {
         title: job.title || '',
@@ -73,12 +61,9 @@ async function fetchRemotiveJobs() {
   }
 }
 
-// ─── Fetch from Jobicy ────────────────────────────────────────────────────────
 async function fetchJobicyJobs() {
   try {
-    const response = await axios.get('https://jobicy.com/api/v2/remote-jobs', {
-      params: { count: 50, tag: 'product manager' }
-    });
+    var response = await axios.get('https://jobicy.com/api/v2/remote-jobs', { params: { count: 50, tag: 'product manager' } });
     return (response.data.jobs || []).map(function(job) {
       return {
         title: job.jobTitle || '',
@@ -97,143 +82,116 @@ async function fetchJobicyJobs() {
   }
 }
 
-// ─── Deduplicate ──────────────────────────────────────────────────────────────
 function deduplicateJobs(jobs) {
   var seen = new Set();
   return jobs.filter(function(job) {
-    var key = job.title.toLowerCase().trim() + '-' + job.company.toLowerCase().trim();
+    var key = job.title.toLowerCase().trim() + '||' + job.company.toLowerCase().trim();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 }
 
-// ─── Filter to PM roles only ──────────────────────────────────────────────────
 function filterRelevantJobs(jobs) {
-  var includeKeywords = [
-  'product manager', 'product management', 'associate pm', 'apm',
-  'senior pm', 'technical pm', 'product lead', 'group product manager',
-  'director of product', 'vp product', 'head of product',
-  'product owner', 'growth manager', 'platform manager',
-  'product strategist', 'product operations', 'product',
-  'pm -', '- pm', 'head of product', 'vp of product'
-];
   var excludeKeywords = [
     'marketing manager', 'sales manager', 'account manager', 'project manager',
-    'hr manager', 'operations manager', 'office manager', 'store manager',
-    'supply chain', 'logistics', 'warehouse', 'driver', 'nurse', 'teacher'
+    'hr manager', 'office manager', 'store manager', 'supply chain',
+    'logistics', 'warehouse', 'driver', 'nurse', 'teacher',
+    'data engineer', 'software engineer', 'devops', 'designer', 'actuary'
   ];
-
   return jobs.filter(function(job) {
     var titleLower = job.title.toLowerCase();
-    var hasInclude = includeKeywords.some(function(k) { return titleLower.includes(k); });
-    var hasExclude = excludeKeywords.some(function(k) { return titleLower.includes(k); });
-    return hasInclude && !hasExclude;
+    return !excludeKeywords.some(function(k) { return titleLower.includes(k); });
   });
 }
 
-// ─── Score jobs with GPT-4o ───────────────────────────────────────────────────
 async function scoreJobs(jobs) {
   var resumeSummary = [
     'Candidate: ' + RESUME.name,
-    'Experience: 7+ years in B2B SaaS Product Management',
-    'Key Achievements: $580K revenue growth, 40% MAU growth, 18-point NPS improvement, 0-to-1 product launches',
-    'AI Experience: Built OpenAI API-integrated products, AI agent architecture, LLM product development',
-    'Core Skills: Product roadmap, PLG, GTM strategy, agile, user research, stakeholder management, A/B testing',
-    'Technical: REST APIs, SQL, Jira, Figma, Next.js, Supabase, OpenAI API',
-    'Certifications: CSPO, PMI, Pendo, Aha!',
+    'Experience: 7+ years B2B SaaS Product Management',
+    'Achievements: $580K revenue, 40% MAU growth, 18pt NPS improvement, 0-to-1 launches',
+    'AI: Built OpenAI API products, agentic workflows, LLM product dev',
+    'Skills: Roadmap, PLG, GTM, agile, user research, A/B testing, stakeholder mgmt',
+    'Tech: REST APIs, SQL, Jira, Figma, Next.js, Supabase, OpenAI API',
+    'Certs: CSPO, PMI, Pendo, Aha!',
     'Education: MS Information Studies (Trine University)',
-    'Target: PM roles at B2B SaaS, AI startups, scaleups, enterprise software companies in USA'
+    'Target: PM at B2B SaaS, AI startups, enterprise software in USA'
   ].join('\n');
 
-  var batchSize = 10;
   var scoredJobs = [];
+  var batchSize = 10;
 
   for (var i = 0; i < jobs.length; i += batchSize) {
     var batch = jobs.slice(i, i + batchSize);
     var jobList = batch.map(function(job, idx) {
-      return 'Job ' + (idx + 1) + ': "' + job.title + '" at ' + job.company + ' (' + job.location + ')\nDescription: ' + job.description.substring(0, 300);
+      return 'Job ' + (idx+1) + ': "' + job.title + '" at ' + job.company + ' (' + job.location + ')\n' + job.description.substring(0, 300);
     }).join('\n\n');
 
     try {
       var response = await openai.chat.completions.create({
         model: 'gpt-4o',
-        messages: [{
-          role: 'user',
-          content: 'You are an expert PM recruiter. Score how well each job matches this candidate on a scale of 0-100.\n\nCANDIDATE:\n' + resumeSummary + '\n\nSCORING:\n85-100: Perfect match\n70-84: Strong match\n55-69: Decent match\n40-54: Weak match\n0-39: Poor match\n\nJOBS:\n' + jobList + '\n\nReturn ONLY a JSON array like: [85, 72, 90, 65]\nNo explanation, just the array.'
-        }],
+        messages: [{ role: 'user', content: 'Score each job 0-100 match for this candidate.\n\nCANDIDATE:\n' + resumeSummary + '\n\nSCORING: 85-100=Perfect, 70-84=Strong, 55-69=Decent, 40-54=Weak, 0-39=Poor\n\nJOBS:\n' + jobList + '\n\nReturn ONLY a JSON array like: [85, 72, 90]\nNo explanation, just the array.' }],
         temperature: 0.2,
         max_tokens: 100
       });
-
       var text = response.choices[0].message.content.trim();
-      var scoresMatch = text.match(/\[[\d,\s]+\]/);
-      if (scoresMatch) {
-        var scores = JSON.parse(scoresMatch[0]);
+      var match = text.match(/\[[\d,\s]+\]/);
+      if (match) {
+        var scores = JSON.parse(match[0]);
         batch.forEach(function(job, idx) {
           scoredJobs.push(Object.assign({}, job, { matchScore: scores[idx] || 50 }));
         });
       } else {
-        batch.forEach(function(job) {
-          scoredJobs.push(Object.assign({}, job, { matchScore: 50 }));
-        });
+        batch.forEach(function(job) { scoredJobs.push(Object.assign({}, job, { matchScore: 50 })); });
       }
     } catch (err) {
       console.error('Scoring error:', err.message);
-      batch.forEach(function(job) {
-        scoredJobs.push(Object.assign({}, job, { matchScore: 50 }));
-      });
+      batch.forEach(function(job) { scoredJobs.push(Object.assign({}, job, { matchScore: 50 })); });
     }
 
     if (i + batchSize < jobs.length) {
-      await new Promise(function(resolve) { setTimeout(resolve, 1000); });
+      await new Promise(function(r) { setTimeout(r, 1000); });
     }
   }
-
   return scoredJobs;
 }
 
-// ─── Main agent function ──────────────────────────────────────────────────────
 async function runJobAgent() {
-  console.log('Job Agent starting...');
-  console.log('Fetching jobs from all sources...');
+  console.log('🤖 Job Agent starting...');
+  console.log('📡 Fetching jobs from all sources...');
 
-  // Sequential JSearch calls to avoid rate limiting
   var jsearchResults = [];
   for (var i = 0; i < SEARCH_KEYWORDS.length; i++) {
-    var keyword = SEARCH_KEYWORDS[i];
-    var results = await fetchJSearchJobs(keyword);
+    var results = await fetchJSearchJobs(SEARCH_KEYWORDS[i]);
     jsearchResults = jsearchResults.concat(results);
-    console.log('  JSearch "' + keyword + '": ' + results.length + ' jobs');
-    await new Promise(function(resolve) { setTimeout(resolve, 5000); });
+    console.log('  ✓ JSearch "' + SEARCH_KEYWORDS[i] + '": ' + results.length + ' jobs');
+    await new Promise(function(r) { setTimeout(r, 5000); });
   }
 
   var remotiveResults = await fetchRemotiveJobs();
-  console.log('  Remotive: ' + remotiveResults.length + ' jobs');
+  console.log('  ✓ Remotive: ' + remotiveResults.length + ' jobs');
 
   var jobicyResults = await fetchJobicyJobs();
-  console.log('  Jobicy: ' + jobicyResults.length + ' jobs');
+  console.log('  ✓ Jobicy: ' + jobicyResults.length + ' jobs');
 
   var allJobs = jsearchResults.concat(remotiveResults).concat(jobicyResults);
-  console.log('Total fetched: ' + allJobs.length);
+  console.log('📦 Total fetched: ' + allJobs.length);
 
-  var filteredJobs = filterRelevantJobs(allJobs);
-  console.log('After PM filter: ' + filteredJobs.length + ' jobs');
+  var filtered = filterRelevantJobs(allJobs);
+  console.log('🔍 After filter: ' + filtered.length);
 
-  var uniqueJobs = deduplicateJobs(filteredJobs);
-  console.log('After dedup: ' + uniqueJobs.length + ' unique jobs');
+  var unique = deduplicateJobs(filtered);
+  console.log('🔄 After dedup: ' + unique.length);
 
-  var validJobs = uniqueJobs.filter(function(j) { return j.applyLink && j.title; });
-  console.log('Valid jobs: ' + validJobs.length);
+  var valid = unique.filter(function(j) { return j.applyLink && j.title; });
+  console.log('✅ Valid jobs: ' + valid.length);
 
-  console.log('Scoring jobs against your resume...');
-  var scoredJobs = await scoreJobs(validJobs);
+  console.log('🧠 Scoring jobs...');
+  var scored = await scoreJobs(valid);
 
-  var top50 = scoredJobs
-    .sort(function(a, b) { return b.matchScore - a.matchScore; })
-    .slice(0, 50);
+  var top50 = scored.sort(function(a, b) { return b.matchScore - a.matchScore; }).slice(0, 50);
+  console.log('🏆 Top 50. Score range: ' + top50[top50.length-1].matchScore + ' - ' + top50[0].matchScore);
 
-  console.log('Top 50 selected. Score range: ' + top50[top50.length-1].matchScore + ' - ' + top50[0].matchScore);
   return top50;
 }
 
