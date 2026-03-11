@@ -111,12 +111,13 @@ function deduplicateJobs(jobs) {
 // ─── Filter to PM roles only ──────────────────────────────────────────────────
 function filterRelevantJobs(jobs) {
   var includeKeywords = [
-    'product manager', 'product management', 'associate pm', 'apm',
-    'senior pm', 'technical pm', 'product lead', 'group product manager',
-    'director of product', 'vp product', 'head of product',
-    'product owner', 'growth manager', 'platform manager',
-    'product strategist', 'product operations'
-  ];
+  'product manager', 'product management', 'associate pm', 'apm',
+  'senior pm', 'technical pm', 'product lead', 'group product manager',
+  'director of product', 'vp product', 'head of product',
+  'product owner', 'growth manager', 'platform manager',
+  'product strategist', 'product operations', 'product',
+  'pm -', '- pm', 'head of product', 'vp of product'
+];
   var excludeKeywords = [
     'marketing manager', 'sales manager', 'account manager', 'project manager',
     'hr manager', 'operations manager', 'office manager', 'store manager',
@@ -204,7 +205,7 @@ async function runJobAgent() {
     var results = await fetchJSearchJobs(keyword);
     jsearchResults = jsearchResults.concat(results);
     console.log('  JSearch "' + keyword + '": ' + results.length + ' jobs');
-    await new Promise(function(resolve) { setTimeout(resolve, 3000); });
+    await new Promise(function(resolve) { setTimeout(resolve, 5000); });
   }
 
   var remotiveResults = await fetchRemotiveJobs();
