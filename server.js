@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const { runJobAgent } = require('./agent');
@@ -13,7 +14,7 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ─── Persistent dedup using a JSON file ──────────────────
+// ─── Persistent dedup ─────────────────────────────────────
 const SEEN_FILE = path.join(__dirname, 'seen_jobs.json');
 
 function loadSeenJobs() {
@@ -36,7 +37,6 @@ function saveSeenJobs(seenSet) {
   }
 }
 
-// Keep max 2000 entries to prevent file bloat (drop oldest)
 function pruneSeenJobs(seenSet, maxSize) {
   if (seenSet.size > maxSize) {
     var arr = Array.from(seenSet);
@@ -46,25 +46,17 @@ function pruneSeenJobs(seenSet, maxSize) {
   return seenSet;
 }
 
-app.get('/health', function(req, res) {
-  var seen = loadSeenJobs();
-  res.json({ status: 'running', time: new Date().toISOString(), seenJobsTracked: seen.size });
-});
-
-app.post('/run-agent', async function(req, res) {
-  res.json({ message: 'Agent started! Check your email and Google Sheet in a few minutes.' });
-
+// ─── Core agent runner ────────────────────────────────────
+async function runAgent() {
   try {
     console.log('\n🚀 Starting job search agent run...');
     console.log('⏰ Time: ' + new Date().toLocaleString());
 
     var allJobs = await runJobAgent();
 
-    // Load persistent seen jobs
     var seenKeys = loadSeenJobs();
     var beforeCount = seenKeys.size;
 
-    // Filter to only genuinely new jobs
     var newJobs = allJobs.filter(function(job) {
       var key = job.title.toLowerCase().trim() + '||' + job.company.toLowerCase().trim();
       if (seenKeys.has(key)) return false;
@@ -75,12 +67,11 @@ app.post('/run-agent', async function(req, res) {
     console.log('🔎 Seen jobs tracked: ' + beforeCount);
     console.log('🆕 New jobs this run: ' + newJobs.length);
 
-    // Save updated seen keys
     seenKeys = pruneSeenJobs(seenKeys, 2000);
     saveSeenJobs(seenKeys);
 
     if (newJobs.length === 0) {
-      console.log('✅ No new jobs found — all already tracked. Skipping sheet + email.');
+      console.log('✅ No new jobs found — skipping sheet + email.');
       return;
     }
 
@@ -94,6 +85,25 @@ app.post('/run-agent', async function(req, res) {
   } catch (err) {
     console.error('❌ Agent run failed:', err.message);
   }
+}
+
+// ─── Cron: every day at 6 PM EST ─────────────────────────
+cron.schedule('0 18 * * *', function() {
+  console.log('\n⏰ Cron triggered — 6 PM EST');
+  runAgent();
+}, { timezone: 'America/New_York' });
+
+console.log('✅ Scheduler running — fires every day at 6:00 PM EST');
+
+// ─── Routes ───────────────────────────────────────────────
+app.get('/health', function(req, res) {
+  var seen = loadSeenJobs();
+  res.json({ status: 'running', time: new Date().toISOString(), seenJobsTracked: seen.size });
+});
+
+app.post('/run-agent', async function(req, res) {
+  res.json({ message: 'Agent started! Check your email and Google Sheet in a few minutes.' });
+  runAgent();
 });
 
 app.post('/tailor-resume', async function(req, res) {
@@ -123,7 +133,6 @@ app.post('/tailor-resume', async function(req, res) {
   }
 });
 
-// Reset seen jobs (use if you want a fresh start)
 app.post('/reset-seen', function(req, res) {
   try {
     fs.writeFileSync(SEEN_FILE, '[]', 'utf8');
